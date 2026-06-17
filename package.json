@@ -1,0 +1,40 @@
+{
+  "name": "dep-scanner",
+  "version": "1.0.0",
+  "description": "仓库依赖批量分析工具 - 扫描多项目依赖状况，检测版本过旧、安全告警和版本冲突",
+  "type": "module",
+  "bin": {
+    "dep-scanner": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": [
+    "dependency",
+    "scanner",
+    "security",
+    "cli",
+    "analysis"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "semver": "^7.6.2",
+    "chalk": "^5.3.0",
+    "cli-table3": "^0.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/semver": "^7.5.8",
+    "typescript": "^5.4.5",
+    "tsx": "^4.11.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

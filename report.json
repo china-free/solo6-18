@@ -1,0 +1,217 @@
+{
+  "scanDate": "2026-06-17T03:38:49.271Z",
+  "scanPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures",
+  "totalProjects": 3,
+  "projects": [
+    {
+      "name": "test-project-a",
+      "path": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-a",
+      "packageJsonPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-a\\package.json",
+      "version": "1.0.0",
+      "dependencies": {
+        "dependencies": {
+          "lodash": "4.17.15",
+          "react": "17.0.2",
+          "minimist": "1.2.0",
+          "chalk": "4.1.0"
+        },
+        "devDependencies": {
+          "typescript": "4.5.0",
+          "jest": "27.0.0"
+        },
+        "peerDependencies": {},
+        "optionalDependencies": {}
+      }
+    },
+    {
+      "name": "test-project-b",
+      "path": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-b",
+      "packageJsonPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-b\\package.json",
+      "version": "2.0.0",
+      "dependencies": {
+        "dependencies": {
+          "lodash": "4.17.21",
+          "react": "18.2.0",
+          "dot-prop": "5.0.0",
+          "axios": "0.21.0"
+        },
+        "devDependencies": {
+          "typescript": "5.0.0",
+          "vitest": "0.30.0"
+        },
+        "peerDependencies": {},
+        "optionalDependencies": {}
+      }
+    },
+    {
+      "name": "test-project-c",
+      "path": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-c",
+      "packageJsonPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-c\\package.json",
+      "version": "1.5.0",
+      "dependencies": {
+        "dependencies": {
+          "lodash": "3.10.1",
+          "react": "16.14.0",
+          "set-value": "2.0.0",
+          "glob-parent": "5.0.0"
+        },
+        "devDependencies": {
+          "webpack": "4.46.0",
+          "typescript": "3.9.0"
+        },
+        "peerDependencies": {
+          "react": ">=16.0.0"
+        },
+        "optionalDependencies": {}
+      }
+    }
+  ],
+  "outdated": [],
+  "vulnerabilities": [
+    {
+      "name": "dot-prop",
+      "severity": "high",
+      "title": "Prototype Pollution in dot-prop",
+      "vulnerableVersions": "<5.1.1",
+      "patchedVersions": ">=5.1.1",
+      "projectName": "test-project-b",
+      "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-b",
+      "currentVersion": "5.0.0"
+    },
+    {
+      "name": "lodash",
+      "severity": "high",
+      "title": "Prototype Pollution in lodash",
+      "vulnerableVersions": "<4.17.21",
+      "patchedVersions": ">=4.17.21",
+      "projectName": "test-project-a",
+      "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-a",
+      "currentVersion": "4.17.15"
+    },
+    {
+      "name": "lodash",
+      "severity": "high",
+      "title": "Prototype Pollution in lodash",
+      "vulnerableVersions": "<4.17.21",
+      "patchedVersions": ">=4.17.21",
+      "projectName": "test-project-c",
+      "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-c",
+      "currentVersion": "3.10.1"
+    },
+    {
+      "name": "set-value",
+      "severity": "high",
+      "title": "Prototype Pollution in set-value",
+      "vulnerableVersions": "<2.0.1",
+      "patchedVersions": ">=2.0.1",
+      "projectName": "test-project-c",
+      "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-c",
+      "currentVersion": "2.0.0"
+    },
+    {
+      "name": "glob-parent",
+      "severity": "moderate",
+      "title": "Regular Expression Denial of Service in glob-parent",
+      "vulnerableVersions": "<5.1.2",
+      "patchedVersions": ">=5.1.2",
+      "projectName": "test-project-c",
+      "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-c",
+      "currentVersion": "5.0.0"
+    },
+    {
+      "name": "minimist",
+      "severity": "moderate",
+      "title": "Prototype Pollution in minimist",
+      "vulnerableVersions": "<1.2.6",
+      "patchedVersions": ">=1.2.6",
+      "projectName": "test-project-a",
+      "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-a",
+      "currentVersion": "1.2.0"
+    }
+  ],
+  "conflicts": [
+    {
+      "packageName": "lodash",
+      "versions": [
+        {
+          "version": "4.17.21",
+          "projectName": "test-project-b",
+          "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-b",
+          "type": "dependencies"
+        },
+        {
+          "version": "4.17.15",
+          "projectName": "test-project-a",
+          "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-a",
+          "type": "dependencies"
+        },
+        {
+          "version": "3.10.1",
+          "projectName": "test-project-c",
+          "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-c",
+          "type": "dependencies"
+        }
+      ]
+    },
+    {
+      "packageName": "react",
+      "versions": [
+        {
+          "version": "18.2.0",
+          "projectName": "test-project-b",
+          "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-b",
+          "type": "dependencies"
+        },
+        {
+          "version": "17.0.2",
+          "projectName": "test-project-a",
+          "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-a",
+          "type": "dependencies"
+        },
+        {
+          "version": "16.14.0",
+          "projectName": "test-project-c",
+          "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-c",
+          "type": "dependencies"
+        }
+      ]
+    },
+    {
+      "packageName": "typescript",
+      "versions": [
+        {
+          "version": "5.0.0",
+          "projectName": "test-project-b",
+          "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-b",
+          "type": "devDependencies"
+        },
+        {
+          "version": "4.5.0",
+          "projectName": "test-project-a",
+          "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-a",
+          "type": "devDependencies"
+        },
+        {
+          "version": "3.9.0",
+          "projectName": "test-project-c",
+          "projectPath": "D:\\solor-06\\18\\solo6-18\\test-fixtures\\project-c",
+          "type": "devDependencies"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "totalDependencies": 18,
+    "outdatedCount": 0,
+    "vulnerabilityCount": 6,
+    "conflictCount": 3,
+    "bySeverity": {
+      "high": 4,
+      "moderate": 2
+    },
+    "byDepType": {
+      "dependencies": 12,
+      "devDependencies": 6
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "test-project-c",
+  "version": "1.5.0",
+  "description": "测试项目 C",
+  "dependencies": {
+    "lodash": "3.10.1",
+    "react": "16.14.0",
+    "set-value": "2.0.0",
+    "glob-parent": "5.0.0"
+  },
+  "devDependencies": {
+    "webpack": "4.46.0",
+    "typescript": "3.9.0"
+  },
+  "peerDependencies": {
+    "react": ">=16.0.0"
+  }
+}
