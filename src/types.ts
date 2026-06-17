@@ -94,3 +94,29 @@ export interface ScanOptions {
 }
 
 export type OutputFormat = 'json' | 'markdown' | 'console';
+
+export interface BaselineDiff<T> {
+  added: T[];
+  removed: T[];
+  unchanged: T[];
+}
+
+export interface ScanBaselineDiff {
+  baselineDate: string;
+  currentDate: string;
+  outdated: BaselineDiff<OutdatedDependency>;
+  vulnerabilities: BaselineDiff<SecurityVulnerability>;
+  conflicts: BaselineDiff<VersionConflict>;
+  summary: {
+    outdatedAdded: number;
+    outdatedRemoved: number;
+    outdatedUnchanged: number;
+    vulnAdded: number;
+    vulnRemoved: number;
+    vulnUnchanged: number;
+    conflictAdded: number;
+    conflictRemoved: number;
+    conflictUnchanged: number;
+    trend: 'improving' | 'regressing' | 'stable' | 'mixed';
+  };
+}

@@ -278,5 +278,194 @@ export class ReportGenerator {
         }
         return lines.join('\n');
     }
+    diffToJson(diff) {
+        return JSON.stringify(diff, null, 2);
+    }
+    diffToMarkdown(diff) {
+        const lines = [];
+        lines.push('# 📈 基线对比报告');
+        lines.push('');
+        lines.push(`> 基线时间: ${diff.baselineDate}`);
+        lines.push(`> 当前时间: ${diff.currentDate}`);
+        lines.push('');
+        const trendLabels = {
+            improving: '🟢 改善中',
+            regressing: '🔴 恶化中',
+            stable: '⚪ 稳定',
+            mixed: '🟡 好坏参半'
+        };
+        lines.push('## 📊 总体趋势');
+        lines.push('');
+        lines.push(`**${trendLabels[diff.summary.trend]}**`);
+        lines.push('');
+        lines.push('| 类别 | 新增 (恶化) | 修复 (改善) | 未变化 |');
+        lines.push('|------|-------------|-------------|--------|');
+        lines.push(`| 过时依赖 | ${diff.summary.outdatedAdded} | ${diff.summary.outdatedRemoved} | ${diff.summary.outdatedUnchanged} |`);
+        lines.push(`| 安全告警 | ${diff.summary.vulnAdded} | ${diff.summary.vulnRemoved} | ${diff.summary.vulnUnchanged} |`);
+        lines.push(`| 版本冲突 | ${diff.summary.conflictAdded} | ${diff.summary.conflictRemoved} | ${diff.summary.conflictUnchanged} |`);
+        lines.push('');
+        this.renderOutdatedDiffMarkdown(lines, diff);
+        this.renderVulnDiffMarkdown(lines, diff);
+        this.renderConflictDiffMarkdown(lines, diff);
+        return lines.join('\n');
+    }
+    renderOutdatedDiffMarkdown(lines, diff) {
+        if (diff.outdated.removed.length > 0) {
+            lines.push('## ✅ 已修复的过时依赖');
+            lines.push('');
+            lines.push('| 包名 | 旧版本 | 最新版本 | 项目 | 类型 |');
+            lines.push('|------|--------|----------|------|------|');
+            for (const dep of diff.outdated.removed) {
+                lines.push(`| ${dep.name} | ${dep.currentVersion} | ${dep.latestVersion} | ${dep.projectName} | ${dep.type} |`);
+            }
+            lines.push('');
+        }
+        if (diff.outdated.added.length > 0) {
+            lines.push('## 🔴 新增的过时依赖');
+            lines.push('');
+            lines.push('| 包名 | 当前版本 | 最新版本 | 项目 | 类型 |');
+            lines.push('|------|----------|----------|------|------|');
+            for (const dep of diff.outdated.added) {
+                lines.push(`| ${dep.name} | ${dep.currentVersion} | ${dep.latestVersion} | ${dep.projectName} | ${dep.type} |`);
+            }
+            lines.push('');
+        }
+    }
+    renderVulnDiffMarkdown(lines, diff) {
+        if (diff.vulnerabilities.removed.length > 0) {
+            lines.push('## ✅ 已修复的安全告警');
+            lines.push('');
+            for (const vuln of diff.vulnerabilities.removed) {
+                lines.push(`- **${vuln.name}** (${vuln.severity}): ${vuln.title} — ${vuln.projectName}`);
+            }
+            lines.push('');
+        }
+        if (diff.vulnerabilities.added.length > 0) {
+            lines.push('## 🔴 新增的安全告警');
+            lines.push('');
+            for (const vuln of diff.vulnerabilities.added) {
+                lines.push(`- **${vuln.name}** (${vuln.severity}): ${vuln.title} — ${vuln.projectName}`);
+            }
+            lines.push('');
+        }
+    }
+    renderConflictDiffMarkdown(lines, diff) {
+        if (diff.conflicts.removed.length > 0) {
+            lines.push('## ✅ 已解决的版本冲突');
+            lines.push('');
+            for (const conflict of diff.conflicts.removed) {
+                const versions = conflict.versions.map(v => `${v.version} (${v.projectName})`).join(', ');
+                lines.push(`- **${conflict.packageName}**: ${versions}`);
+            }
+            lines.push('');
+        }
+        if (diff.conflicts.added.length > 0) {
+            lines.push('## 🔴 新增的版本冲突');
+            lines.push('');
+            for (const conflict of diff.conflicts.added) {
+                const versions = conflict.versions.map(v => `${v.version} (${v.projectName})`).join(', ');
+                lines.push(`- **${conflict.packageName}**: ${versions}`);
+            }
+            lines.push('');
+        }
+    }
+    diffToConsole(diff) {
+        const lines = [];
+        lines.push('');
+        lines.push(chalk.bold.cyan('═'.repeat(60)));
+        lines.push(chalk.bold.cyan('  📈 基线对比报告'));
+        lines.push(chalk.bold.cyan('═'.repeat(60)));
+        lines.push('');
+        lines.push(chalk.gray(`基线时间: ${diff.baselineDate}`));
+        lines.push(chalk.gray(`当前时间: ${diff.currentDate}`));
+        lines.push('');
+        const trendConfig = {
+            improving: { label: '🟢 改善中', color: chalk.green.bold },
+            regressing: { label: '🔴 恶化中', color: chalk.red.bold },
+            stable: { label: '⚪ 稳定', color: chalk.white.bold },
+            mixed: { label: '🟡 好坏参半', color: chalk.yellow.bold }
+        };
+        const trend = trendConfig[diff.summary.trend];
+        lines.push(`总体趋势: ${trend.color(trend.label)}`);
+        lines.push('');
+        const trendTable = new Table({
+            head: [chalk.bold('类别'), chalk.bold.red('新增 (恶化)'), chalk.bold.green('修复 (改善)'), chalk.bold('未变化')],
+            colWidths: [18, 18, 18, 12]
+        });
+        trendTable.push(['过时依赖', String(diff.summary.outdatedAdded), String(diff.summary.outdatedRemoved), String(diff.summary.outdatedUnchanged)], ['安全告警', String(diff.summary.vulnAdded), String(diff.summary.vulnRemoved), String(diff.summary.vulnUnchanged)], ['版本冲突', String(diff.summary.conflictAdded), String(diff.summary.conflictRemoved), String(diff.summary.conflictUnchanged)]);
+        lines.push(trendTable.toString());
+        lines.push('');
+        if (diff.outdated.removed.length > 0) {
+            lines.push(chalk.bold.green('✅ 已修复的过时依赖'));
+            lines.push('');
+            const table = new Table({
+                head: [chalk.bold('包名'), chalk.bold('旧版本'), chalk.bold('最新版本'), chalk.bold('项目')],
+                colWidths: [20, 14, 14, 20]
+            });
+            for (const dep of diff.outdated.removed) {
+                table.push([dep.name, dep.currentVersion, dep.latestVersion, dep.projectName]);
+            }
+            lines.push(table.toString());
+            lines.push('');
+        }
+        if (diff.outdated.added.length > 0) {
+            lines.push(chalk.bold.red('🔴 新增的过时依赖'));
+            lines.push('');
+            const table = new Table({
+                head: [chalk.bold('包名'), chalk.bold('当前版本'), chalk.bold('最新版本'), chalk.bold('项目')],
+                colWidths: [20, 14, 14, 20]
+            });
+            for (const dep of diff.outdated.added) {
+                table.push([dep.name, dep.currentVersion, dep.latestVersion, dep.projectName]);
+            }
+            lines.push(table.toString());
+            lines.push('');
+        }
+        if (diff.vulnerabilities.removed.length > 0) {
+            lines.push(chalk.bold.green('✅ 已修复的安全告警'));
+            lines.push('');
+            const table = new Table({
+                head: [chalk.bold('包名'), chalk.bold('严重程度'), chalk.bold('标题'), chalk.bold('项目')],
+                colWidths: [18, 12, 25, 18]
+            });
+            for (const vuln of diff.vulnerabilities.removed) {
+                table.push([vuln.name, vuln.severity, vuln.title, vuln.projectName]);
+            }
+            lines.push(table.toString());
+            lines.push('');
+        }
+        if (diff.vulnerabilities.added.length > 0) {
+            lines.push(chalk.bold.red('🔴 新增的安全告警'));
+            lines.push('');
+            const table = new Table({
+                head: [chalk.bold('包名'), chalk.bold('严重程度'), chalk.bold('标题'), chalk.bold('项目')],
+                colWidths: [18, 12, 25, 18]
+            });
+            for (const vuln of diff.vulnerabilities.added) {
+                table.push([vuln.name, vuln.severity, vuln.title, vuln.projectName]);
+            }
+            lines.push(table.toString());
+            lines.push('');
+        }
+        if (diff.conflicts.removed.length > 0) {
+            lines.push(chalk.bold.green('✅ 已解决的版本冲突'));
+            lines.push('');
+            for (const conflict of diff.conflicts.removed) {
+                const versions = conflict.versions.map(v => `${v.version} (${v.projectName})`).join(', ');
+                lines.push(chalk.green(`  ${conflict.packageName}`) + chalk.gray(` → ${versions}`));
+            }
+            lines.push('');
+        }
+        if (diff.conflicts.added.length > 0) {
+            lines.push(chalk.bold.red('🔴 新增的版本冲突'));
+            lines.push('');
+            for (const conflict of diff.conflicts.added) {
+                const versions = conflict.versions.map(v => `${v.version} (${v.projectName})`).join(', ');
+                lines.push(chalk.red(`  ${conflict.packageName}`) + chalk.gray(` → ${versions}`));
+            }
+            lines.push('');
+        }
+        return lines.join('\n');
+    }
 }
 //# sourceMappingURL=reporter.js.map

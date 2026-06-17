@@ -8,6 +8,7 @@ import { OutdatedChecker } from './outdated.js';
 import { SecurityChecker } from './security.js';
 import { ConflictDetector } from './conflicts.js';
 import { ReportGenerator } from './reporter.js';
+import { BaselineManager } from './baseline.js';
 import { 
   ScanReport, 
   ScanOptions, 
@@ -15,7 +16,8 @@ import {
   OutputFormat,
   ProjectInfo,
   OutdatedDependency,
-  FetchFailure
+  FetchFailure,
+  ScanBaselineDiff
 } from './types.js';
 
 const program = new Command();
@@ -38,6 +40,9 @@ program
   .option('--package <name>', '按包名过滤（支持模糊匹配）')
   .option('--vuln-db <file>', '自定义漏洞数据库 JSON 文件路径')
   .option('-c, --concurrency <number>', '网络请求并发数', '10')
+  .option('--save-baseline <file>', '将本次扫描结果保存为基线文件')
+  .option('--baseline <file>', '与指定基线文件对比，展示差异')
+  .option('--baseline-exit-on-regress', '当基线对比结果为恶化时以非零退出码退出')
   .action(async (scanPath: string, options) => {
     try {
       await runScan(scanPath, options);
@@ -121,6 +126,38 @@ async function runScan(scanPath: string, options: any): Promise<void> {
       console.error(`  - ${failure.packageName}: [${failure.reason}] ${failure.detail}`);
     }
   }
+
+  const baselineManager = new BaselineManager();
+
+  if (options.saveBaseline) {
+    const baselinePath = path.resolve(options.saveBaseline);
+    baselineManager.saveBaseline(report, baselinePath);
+    console.log(`\n✅ 基线已保存: ${baselinePath}`);
+  }
+
+  if (options.baseline) {
+    try {
+      const baselineReport = baselineManager.loadBaseline(options.baseline);
+      const diff = baselineManager.diff(baselineReport, report);
+      const diffOutput = renderDiff(diff, outputFormat, generator);
+
+      if (options.outputFile) {
+        const diffPath = path.resolve(options.outputFile).replace(/(\.\w+)$/, '.diff$1');
+        fs.writeFileSync(diffPath, diffOutput, 'utf-8');
+        console.log(`\n对比报告已写入: ${diffPath}`);
+      } else {
+        console.log(diffOutput);
+      }
+
+      const exitOnRegress = options.baselineExitOnRegress;
+      if (exitOnRegress && diff.summary.trend === 'regressing') {
+        console.error('\n❌ 依赖状况相比基线恶化，流程中止');
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(`\n基线对比失败: ${error instanceof Error ? error.message : error}`);
+    }
+  }
 }
 
 async function generateReport(
@@ -196,6 +233,22 @@ async function generateReport(
       byDepType
     }
   };
+}
+
+function renderDiff(
+  diff: ScanBaselineDiff,
+  format: OutputFormat,
+  generator: ReportGenerator
+): string {
+  switch (format) {
+    case 'json':
+      return generator.diffToJson(diff);
+    case 'markdown':
+      return generator.diffToMarkdown(diff);
+    case 'console':
+    default:
+      return generator.diffToConsole(diff);
+  }
 }
 
 program.parseAsync(process.argv);
