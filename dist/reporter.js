@@ -20,6 +20,9 @@ export class ReportGenerator {
         lines.push(`| 过时依赖 | ${report.summary.outdatedCount} |`);
         lines.push(`| 安全告警 | ${report.summary.vulnerabilityCount} |`);
         lines.push(`| 版本冲突 | ${report.summary.conflictCount} |`);
+        if (report.fetchFailures.length > 0) {
+            lines.push(`| ⚠️ 查询失败 | ${report.summary.fetchFailureCount} |`);
+        }
         lines.push('');
         lines.push('### 按严重程度统计');
         lines.push('');
@@ -133,6 +136,18 @@ export class ReportGenerator {
                 lines.push('');
             }
         }
+        if (report.fetchFailures.length > 0) {
+            lines.push('## 🚫 版本查询失败');
+            lines.push('');
+            lines.push('> 以下依赖无法从 npm registry 获取最新版本，过时检查结果不完整。');
+            lines.push('');
+            lines.push('| 包名 | 失败原因 | 详情 |');
+            lines.push('|------|----------|------|');
+            for (const failure of report.fetchFailures) {
+                lines.push(`| ${failure.packageName} | ${failure.reason} | ${failure.detail} |`);
+            }
+            lines.push('');
+        }
         return lines.join('\n');
     }
     toConsole(report) {
@@ -151,6 +166,9 @@ export class ReportGenerator {
             colWidths: [30, 20]
         });
         summaryTable.push(['项目总数', report.totalProjects], ['依赖总数', report.summary.totalDependencies], ['过时依赖', chalk.yellow(report.summary.outdatedCount)], ['安全告警', chalk.red(report.summary.vulnerabilityCount)], ['版本冲突', chalk.magenta(report.summary.conflictCount)]);
+        if (report.fetchFailures.length > 0) {
+            summaryTable.push(['查询失败', chalk.bgRed.white.bold(report.summary.fetchFailureCount)]);
+        }
         lines.push(summaryTable.toString());
         lines.push('');
         if (report.outdated.length > 0) {
@@ -232,6 +250,31 @@ export class ReportGenerator {
                 lines.push(chalk.gray(`... 还有 ${report.conflicts.length - 10} 个版本冲突`));
                 lines.push('');
             }
+        }
+        if (report.fetchFailures.length > 0) {
+            lines.push(chalk.bold.red('🚫 版本查询失败'));
+            lines.push(chalk.gray('  以下依赖无法获取最新版本，过时检查结果不完整'));
+            lines.push('');
+            const failureTable = new Table({
+                head: [chalk.bold('包名'), chalk.bold('原因'), chalk.bold('详情')],
+                colWidths: [20, 16, 40]
+            });
+            for (const failure of report.fetchFailures) {
+                const reasonLabels = {
+                    network_error: '网络错误',
+                    timeout: '超时',
+                    http_error: 'HTTP 错误',
+                    no_latest_version: '无 latest',
+                    invalid_response: '无效响应'
+                };
+                failureTable.push([
+                    failure.packageName,
+                    reasonLabels[failure.reason] || failure.reason,
+                    failure.detail
+                ]);
+            }
+            lines.push(failureTable.toString());
+            lines.push('');
         }
         return lines.join('\n');
     }

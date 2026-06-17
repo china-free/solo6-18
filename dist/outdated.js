@@ -2,6 +2,7 @@ import semver from 'semver';
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org';
 export class OutdatedChecker {
     cache = new Map();
+    failures = new Map();
     concurrency = 10;
     constructor(concurrency = 10) {
         this.concurrency = concurrency;
@@ -22,11 +23,11 @@ export class OutdatedChecker {
             for (const type of depTypes) {
                 const deps = project.dependencies[type] || {};
                 for (const [name, versionRange] of Object.entries(deps)) {
-                    const latestVersion = this.cache.get(name);
-                    if (!latestVersion)
-                        continue;
                     const currentVersion = this.extractVersion(versionRange);
                     if (!currentVersion)
+                        continue;
+                    const latestVersion = this.cache.get(name);
+                    if (!latestVersion)
                         continue;
                     if (semver.lt(currentVersion, latestVersion)) {
                         const level = this.getOutdatedLevel(currentVersion, latestVersion);
@@ -43,16 +44,19 @@ export class OutdatedChecker {
                 }
             }
         }
-        return outdated.sort((a, b) => {
-            const levelOrder = { major: 0, minor: 1, patch: 2, unknown: 3 };
-            const levelDiff = levelOrder[a.level] - levelOrder[b.level];
-            if (levelDiff !== 0)
-                return levelDiff;
-            return a.name.localeCompare(b.name);
-        });
+        return {
+            outdated: outdated.sort((a, b) => {
+                const levelOrder = { major: 0, minor: 1, patch: 2, unknown: 3 };
+                const levelDiff = levelOrder[a.level] - levelOrder[b.level];
+                if (levelDiff !== 0)
+                    return levelDiff;
+                return a.name.localeCompare(b.name);
+            }),
+            fetchFailures: Array.from(this.failures.values())
+        };
     }
     async fetchLatestVersions(packageNames) {
-        const packagesToFetch = packageNames.filter(name => !this.cache.has(name));
+        const packagesToFetch = packageNames.filter(name => !this.cache.has(name) && !this.failures.has(name));
         if (packagesToFetch.length === 0)
             return;
         const chunks = [];
@@ -73,17 +77,38 @@ export class OutdatedChecker {
                 signal: AbortSignal.timeout(10000)
             });
             if (!response.ok) {
+                this.recordFailure(packageName, 'http_error', `HTTP ${response.status} ${response.statusText}`);
                 return;
             }
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            }
+            catch {
+                this.recordFailure(packageName, 'invalid_response', '响应体无法解析为 JSON');
+                return;
+            }
             const latest = data['dist-tags']?.latest;
-            if (latest) {
-                this.cache.set(packageName, latest);
+            if (!latest) {
+                this.recordFailure(packageName, 'no_latest_version', 'registry 返回的数据中没有 dist-tags.latest');
+                return;
+            }
+            this.cache.set(packageName, latest);
+        }
+        catch (error) {
+            if (error instanceof DOMException && error.name === 'TimeoutError') {
+                this.recordFailure(packageName, 'timeout', `请求超时 (10s)`);
+            }
+            else if (error instanceof TypeError && /fetch|network/i.test(error.message)) {
+                this.recordFailure(packageName, 'network_error', error.message);
+            }
+            else {
+                this.recordFailure(packageName, 'network_error', error instanceof Error ? error.message : String(error));
             }
         }
-        catch {
-            // Silently fail for network errors
-        }
+    }
+    recordFailure(packageName, reason, detail) {
+        this.failures.set(packageName, { packageName, reason, detail });
     }
     extractVersion(versionRange) {
         const cleaned = versionRange.trim();
@@ -122,6 +147,7 @@ export class OutdatedChecker {
     }
     clearCache() {
         this.cache.clear();
+        this.failures.clear();
     }
 }
 //# sourceMappingURL=outdated.js.map

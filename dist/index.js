@@ -90,6 +90,12 @@ async function runScan(scanPath, options) {
     else {
         console.log(output);
     }
+    if (report.fetchFailures.length > 0) {
+        console.error(`\n⚠️  警告: ${report.fetchFailures.length} 个依赖的版本查询失败，过时检查结果不完整:`);
+        for (const failure of report.fetchFailures) {
+            console.error(`  - ${failure.packageName}: [${failure.reason}] ${failure.detail}`);
+        }
+    }
 }
 async function generateReport(projects, options, cliOptions) {
     const outdatedChecker = new OutdatedChecker(parseInt(cliOptions.concurrency));
@@ -98,9 +104,13 @@ async function generateReport(projects, options, cliOptions) {
     if (cliOptions.vulnDb) {
         securityChecker.loadVulnerabilitiesFromFile(path.resolve(cliOptions.vulnDb));
     }
-    let outdated = options.includeOutdated
-        ? await outdatedChecker.checkOutdated(projects, options.depTypes)
-        : [];
+    let outdated = [];
+    let fetchFailures = [];
+    if (options.includeOutdated) {
+        const result = await outdatedChecker.checkOutdated(projects, options.depTypes);
+        outdated = result.outdated;
+        fetchFailures = result.fetchFailures;
+    }
     let vulnerabilities = options.includeVulnerabilities
         ? securityChecker.checkVulnerabilities(projects, options.depTypes)
         : [];
@@ -109,9 +119,10 @@ async function generateReport(projects, options, cliOptions) {
         : [];
     if (options.packageFilter) {
         const filter = options.packageFilter.toLowerCase();
-        outdated = outdated.filter(d => d.name.toLowerCase().includes(filter));
+        outdated = outdated.filter((d) => d.name.toLowerCase().includes(filter));
         vulnerabilities = vulnerabilities.filter(v => v.name.toLowerCase().includes(filter));
         conflicts = conflicts.filter(c => c.packageName.toLowerCase().includes(filter));
+        fetchFailures = fetchFailures.filter((f) => f.packageName.toLowerCase().includes(filter));
     }
     const bySeverity = {};
     for (const vuln of vulnerabilities) {
@@ -135,11 +146,13 @@ async function generateReport(projects, options, cliOptions) {
         outdated,
         vulnerabilities,
         conflicts,
+        fetchFailures,
         summary: {
             totalDependencies: totalDeps,
             outdatedCount: outdated.length,
             vulnerabilityCount: vulnerabilities.length,
             conflictCount: conflicts.length,
+            fetchFailureCount: fetchFailures.length,
             bySeverity,
             byDepType
         }

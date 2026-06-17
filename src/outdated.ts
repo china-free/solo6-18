@@ -1,5 +1,5 @@
 import semver from 'semver';
-import { ProjectInfo, OutdatedDependency, DependencyType } from './types.js';
+import { ProjectInfo, OutdatedDependency, DependencyType, FetchFailure, FetchFailureReason } from './types.js';
 
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org';
 
@@ -12,15 +12,21 @@ interface PackageRegistryInfo {
   time?: Record<string, string>;
 }
 
+export interface OutdatedResult {
+  outdated: OutdatedDependency[];
+  fetchFailures: FetchFailure[];
+}
+
 export class OutdatedChecker {
   private cache: Map<string, string> = new Map();
+  private failures: Map<string, FetchFailure> = new Map();
   private concurrency: number = 10;
 
   constructor(concurrency: number = 10) {
     this.concurrency = concurrency;
   }
 
-  async checkOutdated(projects: ProjectInfo[], depTypes: DependencyType[]): Promise<OutdatedDependency[]> {
+  async checkOutdated(projects: ProjectInfo[], depTypes: DependencyType[]): Promise<OutdatedResult> {
     const outdated: OutdatedDependency[] = [];
     const allPackages = new Set<string>();
 
@@ -39,11 +45,11 @@ export class OutdatedChecker {
       for (const type of depTypes) {
         const deps = project.dependencies[type] || {};
         for (const [name, versionRange] of Object.entries(deps)) {
-          const latestVersion = this.cache.get(name);
-          if (!latestVersion) continue;
-
           const currentVersion = this.extractVersion(versionRange);
           if (!currentVersion) continue;
+
+          const latestVersion = this.cache.get(name);
+          if (!latestVersion) continue;
 
           if (semver.lt(currentVersion, latestVersion)) {
             const level = this.getOutdatedLevel(currentVersion, latestVersion);
@@ -61,16 +67,19 @@ export class OutdatedChecker {
       }
     }
 
-    return outdated.sort((a, b) => {
-      const levelOrder = { major: 0, minor: 1, patch: 2, unknown: 3 };
-      const levelDiff = levelOrder[a.level] - levelOrder[b.level];
-      if (levelDiff !== 0) return levelDiff;
-      return a.name.localeCompare(b.name);
-    });
+    return {
+      outdated: outdated.sort((a, b) => {
+        const levelOrder = { major: 0, minor: 1, patch: 2, unknown: 3 };
+        const levelDiff = levelOrder[a.level] - levelOrder[b.level];
+        if (levelDiff !== 0) return levelDiff;
+        return a.name.localeCompare(b.name);
+      }),
+      fetchFailures: Array.from(this.failures.values())
+    };
   }
 
   private async fetchLatestVersions(packageNames: string[]): Promise<void> {
-    const packagesToFetch = packageNames.filter(name => !this.cache.has(name));
+    const packagesToFetch = packageNames.filter(name => !this.cache.has(name) && !this.failures.has(name));
     
     if (packagesToFetch.length === 0) return;
 
@@ -95,18 +104,39 @@ export class OutdatedChecker {
       });
 
       if (!response.ok) {
+        this.recordFailure(packageName, 'http_error', `HTTP ${response.status} ${response.statusText}`);
         return;
       }
 
-      const data = await response.json() as PackageRegistryInfo;
+      let data: PackageRegistryInfo;
+      try {
+        data = await response.json() as PackageRegistryInfo;
+      } catch {
+        this.recordFailure(packageName, 'invalid_response', '响应体无法解析为 JSON');
+        return;
+      }
+
       const latest = data['dist-tags']?.latest;
       
-      if (latest) {
-        this.cache.set(packageName, latest);
+      if (!latest) {
+        this.recordFailure(packageName, 'no_latest_version', 'registry 返回的数据中没有 dist-tags.latest');
+        return;
       }
-    } catch {
-      // Silently fail for network errors
+
+      this.cache.set(packageName, latest);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'TimeoutError') {
+        this.recordFailure(packageName, 'timeout', `请求超时 (10s)`);
+      } else if (error instanceof TypeError && /fetch|network/i.test(error.message)) {
+        this.recordFailure(packageName, 'network_error', error.message);
+      } else {
+        this.recordFailure(packageName, 'network_error', error instanceof Error ? error.message : String(error));
+      }
     }
+  }
+
+  private recordFailure(packageName: string, reason: FetchFailureReason, detail: string): void {
+    this.failures.set(packageName, { packageName, reason, detail });
   }
 
   private extractVersion(versionRange: string): string | null {
@@ -150,5 +180,6 @@ export class OutdatedChecker {
 
   clearCache(): void {
     this.cache.clear();
+    this.failures.clear();
   }
 }

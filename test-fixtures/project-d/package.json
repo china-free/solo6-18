@@ -1,0 +1,11 @@
+{
+  "name": "test-project-d",
+  "version": "1.0.0",
+  "description": "测试项目 D - 包含不存在的包",
+  "dependencies": {
+    "this-package-does-not-exist-xyz123": "1.0.0"
+  },
+  "devDependencies": {
+    "lodash": "4.17.15"
+  }
+}

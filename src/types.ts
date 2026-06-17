@@ -49,6 +49,19 @@ export interface VersionConflict {
   }>;
 }
 
+export type FetchFailureReason =
+  | 'network_error'
+  | 'timeout'
+  | 'http_error'
+  | 'no_latest_version'
+  | 'invalid_response';
+
+export interface FetchFailure {
+  packageName: string;
+  reason: FetchFailureReason;
+  detail: string;
+}
+
 export interface ScanReport {
   scanDate: string;
   scanPath: string;
@@ -57,11 +70,13 @@ export interface ScanReport {
   outdated: OutdatedDependency[];
   vulnerabilities: SecurityVulnerability[];
   conflicts: VersionConflict[];
+  fetchFailures: FetchFailure[];
   summary: {
     totalDependencies: number;
     outdatedCount: number;
     vulnerabilityCount: number;
     conflictCount: number;
+    fetchFailureCount: number;
     bySeverity: Record<string, number>;
     byDepType: Record<string, number>;
   };

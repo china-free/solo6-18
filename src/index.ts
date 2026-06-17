@@ -13,7 +13,9 @@ import {
   ScanOptions, 
   DependencyType, 
   OutputFormat,
-  ProjectInfo 
+  ProjectInfo,
+  OutdatedDependency,
+  FetchFailure
 } from './types.js';
 
 const program = new Command();
@@ -112,6 +114,13 @@ async function runScan(scanPath: string, options: any): Promise<void> {
   } else {
     console.log(output);
   }
+
+  if (report.fetchFailures.length > 0) {
+    console.error(`\n⚠️  警告: ${report.fetchFailures.length} 个依赖的版本查询失败，过时检查结果不完整:`);
+    for (const failure of report.fetchFailures) {
+      console.error(`  - ${failure.packageName}: [${failure.reason}] ${failure.detail}`);
+    }
+  }
 }
 
 async function generateReport(
@@ -127,9 +136,14 @@ async function generateReport(
     securityChecker.loadVulnerabilitiesFromFile(path.resolve(cliOptions.vulnDb));
   }
 
-  let outdated = options.includeOutdated 
-    ? await outdatedChecker.checkOutdated(projects, options.depTypes)
-    : [];
+  let outdated: OutdatedDependency[] = [];
+  let fetchFailures: FetchFailure[] = [];
+
+  if (options.includeOutdated) {
+    const result = await outdatedChecker.checkOutdated(projects, options.depTypes);
+    outdated = result.outdated;
+    fetchFailures = result.fetchFailures;
+  }
 
   let vulnerabilities = options.includeVulnerabilities
     ? securityChecker.checkVulnerabilities(projects, options.depTypes)
@@ -141,9 +155,10 @@ async function generateReport(
 
   if (options.packageFilter) {
     const filter = options.packageFilter.toLowerCase();
-    outdated = outdated.filter(d => d.name.toLowerCase().includes(filter));
+    outdated = outdated.filter((d: OutdatedDependency) => d.name.toLowerCase().includes(filter));
     vulnerabilities = vulnerabilities.filter(v => v.name.toLowerCase().includes(filter));
     conflicts = conflicts.filter(c => c.packageName.toLowerCase().includes(filter));
+    fetchFailures = fetchFailures.filter((f: FetchFailure) => f.packageName.toLowerCase().includes(filter));
   }
 
   const bySeverity: Record<string, number> = {};
@@ -170,11 +185,13 @@ async function generateReport(
     outdated,
     vulnerabilities,
     conflicts,
+    fetchFailures,
     summary: {
       totalDependencies: totalDeps,
       outdatedCount: outdated.length,
       vulnerabilityCount: vulnerabilities.length,
       conflictCount: conflicts.length,
+      fetchFailureCount: fetchFailures.length,
       bySeverity,
       byDepType
     }
